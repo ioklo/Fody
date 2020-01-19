@@ -1,9 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace Fody
 {
@@ -100,18 +104,21 @@ BeforeOutput:
             {
                 workingDirectory = Path.GetDirectoryName(assemblyPath);
             }
-            var processStartInfo = new ProcessStartInfo(peverifyPath)
+
+            var processStartInfo = new ProcessStartInfo()
             {
-                Arguments = $"\"{assemblyPath}\" /hresult /nologo /ignore={string.Join(",", ignoreCodes)}",
+                FileName = "cmd.exe",
+                Arguments = $"/C chcp 437 && \"{peverifyPath}\" \"{assemblyPath}\" /hresult /nologo /ignore={string.Join(",", ignoreCodes)}",
                 WorkingDirectory = workingDirectory,
                 CreateNoWindow = true,
                 UseShellExecute = false,
-                RedirectStandardOutput = true
+                RedirectStandardOutput = true,
             };
 
             using (var process = Process.Start(processStartInfo))
-            {
+            {   
                 output = process.StandardOutput.ReadToEnd();
+                output = Regex.Replace(output, "^.*\r\n", "");
                 output = Regex.Replace(output, "^All Classes and Methods.*", "");
                 output = output.Trim();
                 if (!process.WaitForExit(10000))
